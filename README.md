@@ -2,12 +2,12 @@
 
 App for polynomial calculations in Galois fields.
 
-##Can:
+## Can:
  - generate Galois fields
  - calculate in the Galois field
  - calculate the minimum polynomials of a field element
 
-###TODO:
+## TODO:
 - [x] Basic render
 - [x] Button events
 - [ ] Exception catching
