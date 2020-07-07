@@ -154,7 +154,7 @@ class CalculatorUI(QtWidgets.QMainWindow, Ui_MainWindow):
 
 class CustomPushButton(QtWidgets.QPushButton):
     """Custom class for some fields"""
-    
+
     def __init__(self, pixmap, power, base, tex):
         super().__init__()
         self.power = power
