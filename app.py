@@ -1,6 +1,7 @@
 from PyQt5 import (QtWidgets, QtSvg)
 from PyQt5.QtGui import (QIcon, QPixmap)
 from PyQt5.QtCore import QSize
+from PyQt5.QtGui import QIntValidator, QValidator
 
 from io import BytesIO
 import matplotlib.pyplot as plot
@@ -17,16 +18,26 @@ class CalculatorUI(QtWidgets.QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
-        self.generate_buttons(self.PrPolynomialElemGrid)
+
+        self.pValidator = QIntValidator(2,9)
+        self.nValidator = QIntValidator(3,128)
+
+        self.generate_buttons(self.PrPolynomialElemGrid, first=True)
+
+        self.p.setValidator(self.pValidator)
+        self.n.setValidator(self.nValidator)
+
+        """self.p.setValidator(self.pValidator)
+        self.n.setValidator(self.nValidator)"""
 
         # Connect buttons with events
         self.p \
-            .editingFinished \
+            .textChanged \
             .connect(
                 lambda: self.generate_buttons(self.PrPolynomialElemGrid)
             )
         self.n \
-            .editingFinished \
+            .textChanged \
             .connect(
                 lambda: self.generate_buttons(self.PrPolynomialElemGrid)
             )
@@ -42,15 +53,24 @@ class CalculatorUI(QtWidgets.QMainWindow, Ui_MainWindow):
             )
 
 
-    def generate_buttons(self, grid):
+    def generate_buttons(self, grid, first=False):
         """Generate buttons and puts it in grid"""
 
         self._clear_grid(grid)
 
         # Check parameters
-        given_p, given_n = int(self.p.text()), int(self.n.text())
-        p = given_p if given_p else self.P
-        n = given_n if given_n else self.N
+        if not first:
+            sender = self.sender()
+            validator = sender.validator()
+            state = validator.validate(sender.text(),0)[0]
+            if state != QValidator.Acceptable:
+                sender.setStyleSheet('background-color: #F6989D;\n')
+                p, n = 2, 3
+            else:
+                sender.setStyleSheet('background-color: #EEEEEC;\n')
+                p, n = int(self.p.text()), int(self.n.text())
+        else:
+            p, n = self.P, self.N
 
         # Generate buttons
         self._create_grid(p, n, 8, grid)
