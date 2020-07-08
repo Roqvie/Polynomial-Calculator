@@ -11,4 +11,5 @@ App for polynomial calculations in Galois fields.
 - [x] Basic render
 - [x] Button events
 - [x] Validate (p,n) parameters
-- [ ] Optimize calculations
+- [ ] Generate Galois field
+- [ ] Show Galois field in another window
