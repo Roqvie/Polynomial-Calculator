@@ -1,12 +1,20 @@
-from PyQt5 import (QtWidgets, QtSvg)
-from PyQt5.QtGui import (QIcon, QPixmap)
-from PyQt5.QtCore import QSize
-from PyQt5.QtGui import QIntValidator, QValidator
+from PyQt5 import (
+                    QtWidgets,
+                    QtSvg,
+                    )
+from PyQt5.QtGui import (
+                            QIcon,
+                            QPixmap,
+                            QIntValidator,
+                            QValidator,
+                        )
+from PyQt5.QtCore import QSize, Qt
 
-from io import BytesIO
-import matplotlib.pyplot as plot
+
 
 from design import Ui_MainWindow
+from table import Ui_Table
+from utils import _render_tex, _create_tex_string
 
 
 class CalculatorUI(QtWidgets.QMainWindow, Ui_MainWindow):
@@ -51,6 +59,19 @@ class CalculatorUI(QtWidgets.QMainWindow, Ui_MainWindow):
             .connect(
                 self._undo
             )
+        self.generate_field \
+            .clicked \
+            .connect(
+                self.show_field
+            )
+
+    def show_field(self):
+        """Show new window with table"""
+
+        rows = int(self.p.text()) ** int(self.n.text())
+        polynomial = self.calc_buffer[-1][1]
+        self.table = CustomTable(rows,2,polynomial)
+        self.table.show()
 
 
     def generate_buttons(self, grid, first=False):
@@ -97,43 +118,16 @@ class CalculatorUI(QtWidgets.QMainWindow, Ui_MainWindow):
     def _generate_button(self, power, base):
         """Generate button with svg-icon from TeX string"""
 
-        tex_string = self._create_tex_string(power, base)
+        tex_string = _create_tex_string(power, base)
         pixmap = QPixmap()
-        pixmap.loadFromData(self._render_tex(tex_string))
+        pixmap.loadFromData(_render_tex(r'$'+tex_string+r'$'))
         pushButton = CustomPushButton(
             pixmap=pixmap,
             power=power,
             base=base,
-            tex=self._create_tex_string(power, base)
+            tex=_create_tex_string(power, base)
         )
         return pushButton
-
-
-    def _create_tex_string(self, power, base):
-        """Generate TeX-based string from parameters"""
-
-        if power == 0:
-            return r'$1$'
-        elif power == 1:
-            return r'$%s$' % base
-        else:
-            return r'$%s^{%s}$' % (base, power)
-
-
-    def _render_tex(self, tex_string, format='svg', fontsize=16):
-        """Render TeX string to svg-file"""
-
-        # Create figure
-        plot.rc('mathtext', fontset='cm')
-        figure = plot.figure(figsize=(0.01, 0.01))
-        figure.text(0, 0, tex_string, fontsize=fontsize, color='black')
-        # Save rendered figure in bytes
-        output = BytesIO()
-        figure.savefig(output, format=format, dpi=300, transparent=True, bbox_inches='tight', pad_inches=0.02)
-        plot.close(fig=figure)
-        output.seek(0)
-
-        return output.read()
 
 
     def _render_input(self):
@@ -141,10 +135,10 @@ class CalculatorUI(QtWidgets.QMainWindow, Ui_MainWindow):
 
         pixmap = QPixmap()
         if len(self.calc_buffer):
-            pixmap.loadFromData(self._render_tex(self.calc_buffer[-1][0], fontsize=18))
+            pixmap.loadFromData(_render_tex(r'$'+self.calc_buffer[-1][0]+r'$', fontsize=18))
             self.label.setPixmap(pixmap)
         else:
-            pixmap.loadFromData(self._render_tex('', fontsize=18))
+            pixmap.loadFromData(_render_tex('', fontsize=18))
             self.label.setPixmap(pixmap)
 
 
@@ -153,16 +147,25 @@ class CalculatorUI(QtWidgets.QMainWindow, Ui_MainWindow):
 
         sender = self.sender()
         if len(self.calc_buffer):
-            self.calc_buffer.append([self.calc_buffer[-1][0] + sender.tex, sender.power])
+            old_item = list(self.calc_buffer[-1][1])
+            old_item.append(sender.power)
+            new_item = [
+                self.calc_buffer[-1][0] + sender.tex,
+                old_item
+            ]
+            self.calc_buffer.append(new_item)
         else:
-            self.calc_buffer.append([sender.tex, sender.power])
+            self.calc_buffer.append([sender.tex, [sender.power]])
 
         self._render_input()
 
 
     def _plus(self):
         if len(self.calc_buffer):
-            self.calc_buffer.append([self.calc_buffer[-1][0] + " + ", 'plus'])
+            self.calc_buffer.append([
+                self.calc_buffer[-1][0] + r" + ",
+                self.calc_buffer[-1][1]
+                ])
             self._render_input()
 
 
@@ -181,3 +184,22 @@ class CustomPushButton(QtWidgets.QPushButton):
         self.base = base
         self.tex = tex
         self.setIcon(QIcon(pixmap))
+
+
+class CustomTable(QtWidgets.QMainWindow, Ui_Table):
+
+    def __init__(self, rows, cols, polynomial):
+        super().__init__()
+        self.setupUi(self)
+
+        self.tableWidget.setColumnCount(cols)
+        self.tableWidget.setRowCount(rows)
+        self.tableWidget.verticalHeader().hide()
+        self.tableWidget.setHorizontalHeaderLabels(['Элемент','Полином'])
+
+        for i in range(rows):
+            VerticalItem = QtWidgets.QTableWidgetItem()
+            pixmap = QPixmap()
+            pixmap.loadFromData(_render_tex(r'$'+_create_tex_string(i,'a')+r'$'))
+            VerticalItem.setIcon(QIcon(pixmap))
+            self.tableWidget.setItem(i,0,VerticalItem)
