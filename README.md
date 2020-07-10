@@ -6,7 +6,9 @@ App for polynomial calculations in Galois fields.
 <p align="center">
   <img src="https://site-402.s3.eu-north-1.amazonaws.com/defaults/main-2.png">
 </p>
-![Generated elements of Galois field](https://site-402.s3.eu-north-1.amazonaws.com/defaults/table.png)
+<p align="center">
+  <img src="https://site-402.s3.eu-north-1.amazonaws.com/defaults/table.png">
+</p>
 
 ## Can:
  - generate Galois fields
