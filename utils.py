@@ -1,5 +1,7 @@
 from io import BytesIO
 import matplotlib.pyplot as plot
+from operator import ixor
+
 
 def _render_tex(tex_string, format='svg', fontsize=16):
     """Render TeX string to svg-file"""
@@ -26,3 +28,42 @@ def _create_tex_string(power, base):
         return r'%s' % base
     else:
         return r'%s^{%s}' % (base, power)
+
+
+def _offset(vector):
+    """Moves the list to the right by an element"""
+
+    new_vector = [0]
+    new_vector.extend(vector[:-1])
+    return new_vector
+
+
+def _new_vector(vector, polynomial):
+    """Adds list items by xor"""
+
+    vector = [vector[i] ^ polynomial[i] for i in range(len(vector))]
+    return vector
+
+
+def get_field(n, polynomial):
+
+    poly = [0]*n
+    for i in range(len(poly)):
+        poly[i] = 1 if i in polynomial else 0
+
+    vect = [1]
+    vect.extend([0 for i in range(n-1)])
+    field = [vect,]
+    new_vect = _offset(vect)
+    while new_vect not in field:
+        field.append(new_vect)
+        if new_vect[-1] == 1:
+            new_vect = _offset(new_vect)
+            new_vect = _new_vector(new_vect, poly)
+        else:
+            new_vect = _offset(new_vect)
+    new_vect = _offset(new_vect)
+    new_vect = _new_vector(new_vect, poly)
+    field.append(new_vect)
+    
+    return field

@@ -14,7 +14,7 @@ from PyQt5.QtCore import QSize, Qt
 
 from design import Ui_MainWindow
 from table import Ui_Table
-from utils import _render_tex, _create_tex_string
+from utils import _render_tex, _create_tex_string, get_field
 
 
 class CalculatorUI(QtWidgets.QMainWindow, Ui_MainWindow):
@@ -70,7 +70,7 @@ class CalculatorUI(QtWidgets.QMainWindow, Ui_MainWindow):
 
         rows = int(self.p.text()) ** int(self.n.text())
         polynomial = self.calc_buffer[-1][1]
-        self.table = CustomTable(rows,2,polynomial)
+        self.table = CustomTable(rows,3,3,polynomial)
         self.table.show()
 
 
@@ -188,18 +188,35 @@ class CustomPushButton(QtWidgets.QPushButton):
 
 class CustomTable(QtWidgets.QMainWindow, Ui_Table):
 
-    def __init__(self, rows, cols, polynomial):
+    def __init__(self, rows, cols, n, polynomial):
         super().__init__()
         self.setupUi(self)
 
         self.tableWidget.setColumnCount(cols)
         self.tableWidget.setRowCount(rows)
         self.tableWidget.verticalHeader().hide()
-        self.tableWidget.setHorizontalHeaderLabels(['Элемент','Полином'])
+        self.tableWidget.setHorizontalHeaderLabels(['Степень a','Многочлен', 'Вектор'])
+        self.tableWidget.setIconSize(QSize(250,40))
 
-        for i in range(rows):
-            VerticalItem = QtWidgets.QTableWidgetItem()
+        # Generate elements
+        tex_strings = [r'$'+_create_tex_string(i,'a')+r'$' for i in range(rows)]
+        for i, string in enumerate(tex_strings):
+            item = QtWidgets.QTableWidgetItem()
             pixmap = QPixmap()
-            pixmap.loadFromData(_render_tex(r'$'+_create_tex_string(i,'a')+r'$'))
-            VerticalItem.setIcon(QIcon(pixmap))
-            self.tableWidget.setItem(i,0,VerticalItem)
+            pixmap.loadFromData(_render_tex(string))
+            item.setIcon(QIcon(pixmap))
+            self.tableWidget.setItem(i,0,item)
+
+        field = get_field(n, polynomial)
+        tex_strings = [[_create_tex_string(i, 'a') for i, bit in enumerate(elem) if bit == 1] for elem in field]
+        tex_strings = ['+'.join(elem) for elem in tex_strings]
+        tex_strings = [r'$'+elem+r'$' for elem in tex_strings]
+        for i, string in enumerate(tex_strings):
+            item = QtWidgets.QTableWidgetItem()
+            pixmap = QPixmap()
+            pixmap.loadFromData(_render_tex(string))
+            item.setIcon(QIcon(pixmap))
+            self.tableWidget.setItem(i,1,item)
+            item = QtWidgets.QTableWidgetItem()
+            item.setText(str(field[i]))
+            self.tableWidget.setItem(i,2,item)
