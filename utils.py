@@ -1,9 +1,8 @@
 from io import BytesIO
 import matplotlib.pyplot as plot
-from operator import ixor
 
 
-def _render_tex(tex_string, format='svg', fontsize=16):
+def render_tex(tex_string: str, format='svg', fontsize=16):
     """Render TeX string to svg-file"""
 
     # Create figure
@@ -19,7 +18,7 @@ def _render_tex(tex_string, format='svg', fontsize=16):
     return output.read()
 
 
-def _create_tex_string(power, base):
+def create_tex_string(power: int, base: str) -> str:
     """Generate TeX-based string from parameters"""
 
     if power == 0:
@@ -30,7 +29,7 @@ def _create_tex_string(power, base):
         return r'%s^{%s}' % (base, power)
 
 
-def _offset(vector):
+def _offset(vector: list) -> list:
     """Moves the list to the right by an element"""
 
     new_vector = [0]
@@ -38,21 +37,23 @@ def _offset(vector):
     return new_vector
 
 
-def _new_vector(vector, polynomial):
+def _new_vector(vector: list, polynomial: list) -> list:
     """Adds list items by xor"""
 
     vector = [vector[i] ^ polynomial[i] for i in range(len(vector))]
     return vector
 
 
-def get_field(n, polynomial):
+def get_field(n: int, polynomial: list) -> list:
+    """Generate Galois field from given primitive polynomial"""
 
+    # Create primitive polynomial with degrees from polynomial list
     poly = [0]*n
     for i in range(len(poly)):
         poly[i] = 1 if i in polynomial else 0
 
-    vect = [1]
-    vect.extend([0 for i in range(n-1)])
+    # Generate vectors for field
+    vect = list(map(int, list('1'.ljust(n,'0'))))
     field = [vect,]
     new_vect = _offset(vect)
     while new_vect not in field:
@@ -65,5 +66,5 @@ def get_field(n, polynomial):
     new_vect = _offset(new_vect)
     new_vect = _new_vector(new_vect, poly)
     field.append(new_vect)
-    
+
     return field

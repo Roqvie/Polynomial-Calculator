@@ -8,13 +8,14 @@ from PyQt5.QtGui import (
                             QIntValidator,
                             QValidator,
                         )
-from PyQt5.QtCore import QSize, Qt
-
-
+from PyQt5.QtCore import (
+                            QSize,
+                            Qt,
+                        )
 
 from design import Ui_MainWindow
 from table import Ui_Table
-from utils import _render_tex, _create_tex_string, get_field
+from utils import *
 
 
 class CalculatorUI(QtWidgets.QMainWindow, Ui_MainWindow):
@@ -65,12 +66,19 @@ class CalculatorUI(QtWidgets.QMainWindow, Ui_MainWindow):
                 self.show_field
             )
 
+
     def show_field(self):
         """Show new window with table"""
 
         rows = int(self.p.text()) ** int(self.n.text())
         polynomial = self.calc_buffer[-1][1]
-        self.table = CustomTable(rows,3,3,polynomial)
+        self.table = CustomTable(rows,3,polynomial)
+        # Generate items
+        tex_strings = [r'$'+create_tex_string(i,'a')+r'$' for i in range(rows)]
+        self.table.generate_elements(tex_strings,0)
+        tex_strings = self.table.generate_from_field(get_field(int(self.n.text()), polynomial))
+        self.table.generate_elements(tex_strings,1)
+        self.table.generate_elements(get_field(int(self.n.text()), polynomial), 2)
         self.table.show()
 
 
@@ -97,6 +105,16 @@ class CalculatorUI(QtWidgets.QMainWindow, Ui_MainWindow):
         self._create_grid(p, n, 8, grid)
 
 
+    def render_input(self):
+        """Render last TeX string from calc_buffer"""
+        pixmap = QPixmap()
+        if len(self.calc_buffer):
+            pixmap.loadFromData(render_tex(r'$'+self.calc_buffer[-1][0]+r'$', fontsize=18))
+        else:
+            pixmap.loadFromData(render_tex('', fontsize=18))
+        self.label.setPixmap(pixmap)
+
+
     def _clear_grid(self, grid):
         """Clears grid from buttons"""
 
@@ -118,28 +136,16 @@ class CalculatorUI(QtWidgets.QMainWindow, Ui_MainWindow):
     def _generate_button(self, power, base):
         """Generate button with svg-icon from TeX string"""
 
-        tex_string = _create_tex_string(power, base)
+        tex_string = create_tex_string(power, base)
         pixmap = QPixmap()
-        pixmap.loadFromData(_render_tex(r'$'+tex_string+r'$'))
+        pixmap.loadFromData(render_tex(r'$'+tex_string+r'$'))
         pushButton = CustomPushButton(
             pixmap=pixmap,
             power=power,
             base=base,
-            tex=_create_tex_string(power, base)
+            tex=create_tex_string(power, base)
         )
         return pushButton
-
-
-    def _render_input(self):
-        """Render last TeX string from calc_buffer"""
-
-        pixmap = QPixmap()
-        if len(self.calc_buffer):
-            pixmap.loadFromData(_render_tex(r'$'+self.calc_buffer[-1][0]+r'$', fontsize=18))
-            self.label.setPixmap(pixmap)
-        else:
-            pixmap.loadFromData(_render_tex('', fontsize=18))
-            self.label.setPixmap(pixmap)
 
 
     def _add(self):
@@ -157,7 +163,7 @@ class CalculatorUI(QtWidgets.QMainWindow, Ui_MainWindow):
         else:
             self.calc_buffer.append([sender.tex, [sender.power]])
 
-        self._render_input()
+        self.render_input()
 
 
     def _plus(self):
@@ -166,13 +172,13 @@ class CalculatorUI(QtWidgets.QMainWindow, Ui_MainWindow):
                 self.calc_buffer[-1][0] + r" + ",
                 self.calc_buffer[-1][1]
                 ])
-            self._render_input()
+        self.render_input()
 
 
     def _undo(self):
         if len(self.calc_buffer):
             self.calc_buffer.pop()
-            self._render_input()
+        self.render_input()
 
 
 class CustomPushButton(QtWidgets.QPushButton):
@@ -188,35 +194,33 @@ class CustomPushButton(QtWidgets.QPushButton):
 
 class CustomTable(QtWidgets.QMainWindow, Ui_Table):
 
-    def __init__(self, rows, cols, n, polynomial):
+    def __init__(self, rows, cols, polynomial):
         super().__init__()
         self.setupUi(self)
 
         self.tableWidget.setColumnCount(cols)
         self.tableWidget.setRowCount(rows)
         self.tableWidget.verticalHeader().hide()
-        self.tableWidget.setHorizontalHeaderLabels(['Степень a','Многочлен', 'Вектор'])
+        self.tableWidget.setHorizontalHeaderLabels(['Степень','Многочлен', 'Вектор'])
         self.tableWidget.setIconSize(QSize(250,40))
 
-        # Generate elements
-        tex_strings = [r'$'+_create_tex_string(i,'a')+r'$' for i in range(rows)]
+
+    def generate_elements(self,tex_strings: list, column: int):
+        """Generate elements"""
+
         for i, string in enumerate(tex_strings):
             item = QtWidgets.QTableWidgetItem()
             pixmap = QPixmap()
-            pixmap.loadFromData(_render_tex(string))
+            pixmap.loadFromData(render_tex(string))
             item.setIcon(QIcon(pixmap))
-            self.tableWidget.setItem(i,0,item)
+            self.tableWidget.setItem(i,column,item)
 
-        field = get_field(n, polynomial)
-        tex_strings = [[_create_tex_string(i, 'a') for i, bit in enumerate(elem) if bit == 1] for elem in field]
+
+    def generate_from_field(self, field: list):
+        """Generate tex_string from field"""
+
+        tex_strings = [[create_tex_string(i, 'x') for i, bit in enumerate(elem) if bit == 1] for elem in field]
         tex_strings = ['+'.join(elem) for elem in tex_strings]
         tex_strings = [r'$'+elem+r'$' for elem in tex_strings]
-        for i, string in enumerate(tex_strings):
-            item = QtWidgets.QTableWidgetItem()
-            pixmap = QPixmap()
-            pixmap.loadFromData(_render_tex(string))
-            item.setIcon(QIcon(pixmap))
-            self.tableWidget.setItem(i,1,item)
-            item = QtWidgets.QTableWidgetItem()
-            item.setText(str(field[i]))
-            self.tableWidget.setItem(i,2,item)
+
+        return tex_strings
