@@ -22,3 +22,5 @@ App for polynomial calculations in Galois fields.
 - [x] Generate Galois field
 - [x] Show Galois field in another window
 - [ ] Calculating in Galois field
+- [ ] Multiplying
+- [ ] Generating minimal polynomials
