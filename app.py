@@ -22,6 +22,7 @@ class CalculatorUI(QtWidgets.QMainWindow, Ui_MainWindow):
     # Constants for field
     P, N = 2, 3
     calc_buffer = []
+    out_buffer = []
 
 
     def __init__(self):
@@ -31,29 +32,34 @@ class CalculatorUI(QtWidgets.QMainWindow, Ui_MainWindow):
         self.pValidator = QIntValidator(2,9)
         self.nValidator = QIntValidator(3,128)
 
-        self.generate_buttons(self.PrPolynomialElemGrid, first=True)
+        self.generate_buttons(self.PrPolynomialElemGrid, first=True, base='x', func=self._add)
 
         self.p.setValidator(self.pValidator)
         self.n.setValidator(self.nValidator)
 
-        """self.p.setValidator(self.pValidator)
-        self.n.setValidator(self.nValidator)"""
+
+        self.add.setEnabled(False)
+        self.back.setEnabled(False)
+        self.clean.setEnabled(False)
+        self.multiply.setEnabled(False)
+        self.calculate.setEnabled(False)
+
 
         # Connect buttons with events
         self.p \
             .textChanged \
             .connect(
-                lambda: self.generate_buttons(self.PrPolynomialElemGrid)
+                lambda: self.generate_buttons(self.PrPolynomialElemGrid, base='x', func=self._add)
             )
         self.n \
             .textChanged \
             .connect(
-                lambda: self.generate_buttons(self.PrPolynomialElemGrid)
+                lambda: self.generate_buttons(self.PrPolynomialElemGrid, base='x', func=self._add)
             )
         self.append \
             .clicked \
             .connect(
-                self._plus
+                self._plus_in
             )
         self.undo \
             .clicked \
@@ -64,6 +70,36 @@ class CalculatorUI(QtWidgets.QMainWindow, Ui_MainWindow):
             .clicked \
             .connect(
                 self.show_field
+            )
+        self.generate_field \
+            .clicked \
+            .connect(
+                lambda: self.generate_buttons(self.elementsGrid, base='a', validate=False, func=self._append)
+            )
+        self.generate_field \
+            .clicked \
+            .connect(
+                self._enable
+            )
+        self.add \
+            .clicked \
+            .connect(
+                self._plus_out
+            )
+        self.back \
+            .clicked \
+            .connect(
+                self._back
+            )
+        self.clear \
+            .clicked \
+            .connect(
+                self._clear
+            )
+        self.clean \
+            .clicked \
+            .connect(
+                self._clean
             )
 
 
@@ -82,14 +118,14 @@ class CalculatorUI(QtWidgets.QMainWindow, Ui_MainWindow):
         self.table.show()
 
 
-    def generate_buttons(self, grid, first=False):
+    def generate_buttons(self, grid, base, func, first=False, validate=True):
         """Generate buttons and puts it in grid"""
 
         self._clear_grid(grid)
 
         # Check parameters
-        if not first:
-            sender = self.sender()
+        if not first and validate:
+            sender= self.sender()
             validator = sender.validator()
             state = validator.validate(sender.text(),0)[0]
             if state != QValidator.Acceptable:
@@ -98,21 +134,36 @@ class CalculatorUI(QtWidgets.QMainWindow, Ui_MainWindow):
             else:
                 sender.setStyleSheet('background-color: #EEEEEC;\n')
                 p, n = int(self.p.text()), int(self.n.text())
-        else:
+        elif validate:
             p, n = self.P, self.N
-
+        elif not validate:
+            p, n = int(self.p.text()), int(self.n.text())
         # Generate buttons
-        self._create_grid(p, n, 8, grid)
+        self._create_grid(p, n, 8, grid, base, func)
 
 
     def render_input(self):
         """Render last TeX string from calc_buffer"""
         pixmap = QPixmap()
-        if len(self.calc_buffer):
-            pixmap.loadFromData(render_tex(r'$'+self.calc_buffer[-1][0]+r'$', fontsize=18))
-        else:
-            pixmap.loadFromData(render_tex('', fontsize=18))
-        self.label.setPixmap(pixmap)
+        if len(self.calc_buffer) and self.calc_buffer[-1][0] != '':
+            string = r'$'+self.calc_buffer[-1][0]+r'$'
+            pixmap.loadFromData(render_tex(string, fontsize=18))
+        elif len(self.calc_buffer) == 0:
+            pixmap.loadFromData(render_tex(''))
+        elif self.calc_buffer[-1][0] == '':
+            pixmap.loadFromData(render_tex(''))
+        self.input_label.setPixmap(pixmap)
+
+
+    def render_output(self):
+        pixmap = QPixmap()
+        if len(self.out_buffer) and self.out_buffer[-1][0] != '':
+            pixmap.loadFromData(render_tex(r'$'+self.out_buffer[-1][0]+r'$', fontsize=18))
+        elif len(self.out_buffer) == 0:
+            pixmap.loadFromData(render_tex(''))
+        elif self.out_buffer[-1][0] == '':
+            pixmap.loadFromData(render_tex(''))
+        self.output_label.setPixmap(pixmap)
 
 
     def _clear_grid(self, grid):
@@ -123,14 +174,14 @@ class CalculatorUI(QtWidgets.QMainWindow, Ui_MainWindow):
                 grid.itemAt(i).widget().close()
 
 
-    def _create_grid(self, p, n, cols, grid):
+    def _create_grid(self, p, n, cols, grid, base, func):
         """Put generated buttons in grid"""
 
         for i in range(n+1):
             # Generate button with TeX string: 'x^{i}'
-            button = self._generate_button(i, 'x')
+            button = self._generate_button(i, base)
             grid.addWidget(button, i//cols, i%cols, 1, 1)
-            button.clicked.connect(self._add)
+            button.clicked.connect(func)
 
 
     def _generate_button(self, power, base):
@@ -152,7 +203,7 @@ class CalculatorUI(QtWidgets.QMainWindow, Ui_MainWindow):
         """Add element in input"""
 
         sender = self.sender()
-        if len(self.calc_buffer):
+        if len(self.calc_buffer) and self.calc_buffer[-1][0] != '':
             old_item = list(self.calc_buffer[-1][1])
             old_item.append(sender.power)
             new_item = [
@@ -160,16 +211,18 @@ class CalculatorUI(QtWidgets.QMainWindow, Ui_MainWindow):
                 old_item
             ]
             self.calc_buffer.append(new_item)
-        else:
+        elif len(self.calc_buffer) == 0:
             self.calc_buffer.append([sender.tex, [sender.power]])
+        elif self.calc_buffer[-1][0] == '':
+            self.calc_buffer[-1] = [sender.tex, [sender.power]]
 
         self.render_input()
 
 
-    def _plus(self):
+    def _plus_in(self):
         if len(self.calc_buffer):
             self.calc_buffer.append([
-                self.calc_buffer[-1][0] + r" + ",
+                self.calc_buffer[-1][0] + r' + ',
                 self.calc_buffer[-1][1]
                 ])
         self.render_input()
@@ -180,6 +233,58 @@ class CalculatorUI(QtWidgets.QMainWindow, Ui_MainWindow):
             self.calc_buffer.pop()
         self.render_input()
 
+
+    def _plus_out(self):
+        if len(self.out_buffer):
+            self.out_buffer.append([
+                self.out_buffer[-1][0] + r' + ',
+                self.out_buffer[-1][1]
+                ])
+        self.render_output()
+
+
+    def _append(self):
+        """Add element in input"""
+
+        sender = self.sender()
+        if len(self.out_buffer) and self.out_buffer[-1][0] != '':
+            old_item = list(self.out_buffer[-1][1])
+            old_item.append(sender.power)
+            new_item = [
+                self.out_buffer[-1][0] + sender.tex,
+                old_item
+            ]
+            self.out_buffer.append(new_item)
+        elif len(self.out_buffer) == 0:
+            self.out_buffer.append([sender.tex, [sender.power]])
+        elif self.out_buffer[-1][0] == '':
+            self.out_buffer[-1] = [sender.tex, [sender.power]]
+
+        self.render_output()
+
+
+    def _back(self):
+        if len(self.out_buffer):
+            self.out_buffer.pop()
+        self.render_output()
+
+
+    def _clear(self):
+        self.calc_buffer.append(['', None])
+        self.render_input()
+
+
+    def _clean(self):
+        self.out_buffer.append(['', None])
+        self.render_output()
+
+
+    def _enable(self):
+        self.add.setEnabled(True)
+        self.back.setEnabled(True)
+        self.clean.setEnabled(True)
+        self.multiply.setEnabled(True)
+        self.calculate.setEnabled(True)
 
 class CustomPushButton(QtWidgets.QPushButton):
     """Custom class for some fields"""
