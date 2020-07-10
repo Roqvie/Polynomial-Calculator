@@ -3,7 +3,7 @@
 App for polynomial calculations in Galois fields.
 
 ## View:
-![Main window](https://site-402.s3.eu-north-1.amazonaws.com/defaults/main.png)
+![Main window](https://site-402.s3.eu-north-1.amazonaws.com/defaults/main-1.png)
 ![Generated elements of Galois field](https://site-402.s3.eu-north-1.amazonaws.com/defaults/table.png)
 
 ## Can:
