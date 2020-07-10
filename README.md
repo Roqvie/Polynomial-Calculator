@@ -4,7 +4,7 @@ App for polynomial calculations in Galois fields.
 
 ## View:
 ![Main window](https://site-402.s3.eu-north-1.amazonaws.com/defaults/main.png)
-![Generated elements of Galois field](https://site-402.s3.eu-north-1.amazonaws.com/defaults/main.png)
+![Generated elements of Galois field](https://site-402.s3.eu-north-1.amazonaws.com/defaults/table.png)
 
 ## Can:
  - generate Galois fields
